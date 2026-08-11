@@ -219,10 +219,48 @@ present, missing)` adapts an existing boolean probe by supplying both messages a
 the point where they are known. **PULSE's exact detail strings are Tier 1 and do
 not move** — the composition site changes, the text does not.
 
+### T3-5 · A spec with no probe at all
+
+Found during PULSE's migration, not during the boundary read — which is what the
+gate is for.
+
+| | Before | After |
+|---|---|---|
+| PULSE | `MISSING`, carrying the spec's ordinary update-site wording | `ERROR "No dependency probe configured."` |
+| FLASH | already errored | unchanged |
+
+PULSE's service tested `spec.getProbe() != null && spec.getProbe().isPresent()`,
+so a spec with no probe fell through to "not present" and the user was told to
+enable an update site and install something that may well already be there — to
+fix what is actually a fault in the catalogue. FLASH's builder already defaulted
+to an error probe. **Same stricter-rule-wins decision as T3-2 and T3-3.**
+
+**Who is affected.** Nobody, today: all ten of PULSE's specs declare a probe and
+all twenty of FLASH's do, so this moves no text any user has seen. It appears
+only in the harness's synthetic `probe=null` scenario. It is declared anyway,
+because "unreachable" is a property of today's catalogue and not of the code.
+
+### How a declared change is reconciled with an immutable golden
+
+Not by regenerating the golden. PULSE's harness carries a `DeclaredChange`
+class: each item above is expressed as a **rule that rewrites the golden the way
+the decision says it should have moved**, plus the exact number of lines that
+rule may touch. The rewritten golden must then match the new output byte for
+byte.
+
+That is strictly stronger than regenerating, and the reason is the line count:
+
+- a diff the declared change does not fully explain still fails;
+- a rule broad enough to absorb an unrelated regression fails on the count;
+- the original golden stays in the repository as the record of what the shipped
+  plugin actually did, with the reason for every deviation readable beside it;
+- reverting a declared change means deleting its rule — the golden is still the
+  original, so it simply starts passing again.
+
 ### Sign-off
 
 Shipping without a decision on each of these is the failure mode to avoid. All
-four are decided; what remains is the CHANGELOG entry in each affected consumer
+five are decided; what remains is the CHANGELOG entry in each affected consumer
 and, for T3-1, one check on a real Fiji install.
 
 ---
@@ -306,7 +344,7 @@ All of the following, in writing, before any jar is published:
 - [ ] Both restart scripts byte-identical; argv identical; no `-ExecutionPolicy`
 - [ ] `FLASH-restart-imagej.log` and `PULSE-restart-imagej.log` unchanged
 - [ ] Every product-named file in §3.2 unchanged
-- [ ] T3-1 … T3-4 signed off, with a CHANGELOG line in each affected consumer
+- [ ] T3-1 … T3-5 signed off, with a CHANGELOG line in each affected consumer
 - [ ] T3-1 verified on a real Fiji install, not only in the harness
 - [ ] FLASH: 4,429 tests, the same 4 pre-existing failures, no fifth
 - [ ] PULSE: 967 tests green
