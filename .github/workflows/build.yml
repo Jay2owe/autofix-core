@@ -1,0 +1,61 @@
+name: Build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Java 21 builds it; the bytecode target stays at 8, set by pom-scijava.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Build and test
+        run: mvn --batch-mode --no-transfer-progress clean verify
+
+      # This chassis is the one that talks to the network and to Fiji.app, so
+      # the headless rule matters more here than anywhere: a core throws, and
+      # the plugin embedding it decides how to present the failure.
+      - name: Check nothing takes over user interaction
+        run: |
+          if grep -rn --include=*.java \
+               -e 'GenericDialog' -e 'IJ\.error(' -e 'IJ\.showMessage' \
+               -e 'System\.exit(' -e 'javax\.swing' \
+               src/main/java; then
+            echo "FAIL: a core must throw and let its consumer present."
+            exit 1
+          fi
+          echo "OK: no dialogs, no IJ.error, no System.exit, no Swing."
+
+      # Relocation rewrites bytecode references but not strings. Any literal
+      # beginning with this module's own package name would be silently
+      # rewritten into each consumer's private namespace, so two plugins would
+      # stop agreeing about a name the README documents. cpc-core shipped with
+      # five such literals; this check is why this module will not.
+      - name: Check no string literal names this module's package
+        run: |
+          if grep -rn --include=*.java '"sc\.fiji\.autofix' src/main/java; then
+            echo "FAIL: a string literal names a relocated package."
+            exit 1
+          fi
+          echo "OK: no relocation-fragile literals."
+
+      # The whole point of this module is that embedding it costs the user
+      # nothing. Anything beyond ij is a second install for every consumer.
+      - name: Check the dependency list is still ij only
+        run: |
+          mvn --batch-mode --no-transfer-progress dependency:list \
+              -DexcludeScope=test -DoutputFile=deps.txt -DincludeScope=runtime
+          if grep -vE '^(\s*$|The following|net\.imagej:ij)' deps.txt | grep -q ':'; then
+            echo "FAIL: this module acquired a dependency beyond net.imagej:ij."
+            cat deps.txt
+            exit 1
+          fi
+          echo "OK: ij only."

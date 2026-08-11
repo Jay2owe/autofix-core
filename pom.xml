@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+		http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<!--
+	  pom-scijava 31.1.0 matches BOTH consumers (FLASH 4.0.0 and PULSE 5.0.1),
+	  not oc3d-core's line. The parent decides which net.imagej:ij this module
+	  compiles against, and a bit-identity gate is only meaningful if the
+	  chassis and the plugins embedding it agree on it.
+	-->
+	<parent>
+		<groupId>org.scijava</groupId>
+		<artifactId>pom-scijava</artifactId>
+		<version>31.1.0</version>
+		<relativePath/>
+	</parent>
+
+	<groupId>io.github.jay2owe</groupId>
+	<artifactId>autofix-core</artifactId>
+	<version>0.1.0</version>
+
+	<name>autofix-core</name>
+	<description>Runtime dependency autofix as an embeddable chassis: detect what is missing, say what installing it costs, install it on one click, verify it, and restart Fiji if the fix needs it. Carries the model, the probes, the jar fixer and the restart helper; never the catalogue of what a given plugin needs. Shaded into each consuming plugin under a private package name; never shipped to users as a jar.</description>
+	<url>https://github.com/Jay2owe/autofix-core</url>
+	<inceptionYear>2026</inceptionYear>
+	<organization>
+		<name>UK Dementia Research Institute at Imperial College London</name>
+		<url>https://ukdri.ac.uk/centres/imperial</url>
+	</organization>
+
+	<!--
+	  BSD-3-Clause with no asterisk. This module links net.imagej:ij (ImageJ 1.x,
+	  public domain) and nothing else, so a consumer that shades it in inherits
+	  no obligation from it. See ../PLUGIN_CORE_PATTERN.md.
+	-->
+	<licenses>
+		<license>
+			<name>BSD 3-Clause License</name>
+			<url>https://opensource.org/licenses/BSD-3-Clause</url>
+			<distribution>repo</distribution>
+		</license>
+	</licenses>
+
+	<developers>
+		<developer>
+			<id>Jay2owe</id>
+			<name>Jamie Malcolm</name>
+			<email>jamiemalcolm12@gmail.com</email>
+			<url>https://github.com/Jay2owe</url>
+			<organization>UK Dementia Research Institute at Imperial College London</organization>
+			<organizationUrl>https://www.ukdri.ac.uk/labs/brancaccio-lab</organizationUrl>
+			<properties>
+				<orcid>0009-0008-3862-2776</orcid>
+			</properties>
+			<roles>
+				<role>founder</role>
+				<role>lead</role>
+				<role>developer</role>
+				<role>maintainer</role>
+			</roles>
+		</developer>
+	</developers>
+	<contributors>
+		<contributor>
+			<name>Jamie Malcolm</name>
+			<url>https://github.com/Jay2owe</url>
+			<properties><id>Jay2owe</id></properties>
+		</contributor>
+	</contributors>
+
+	<mailingLists>
+		<mailingList>
+			<name>Image.sc Forum</name>
+			<archive>https://forum.image.sc/tag/imagej</archive>
+		</mailingList>
+	</mailingLists>
+
+	<scm>
+		<connection>scm:git:https://github.com/Jay2owe/autofix-core</connection>
+		<developerConnection>scm:git:git@github.com:Jay2owe/autofix-core</developerConnection>
+		<tag>HEAD</tag>
+		<url>https://github.com/Jay2owe/autofix-core</url>
+	</scm>
+	<issueManagement>
+		<system>GitHub Issues</system>
+		<url>https://github.com/Jay2owe/autofix-core/issues</url>
+	</issueManagement>
+	<ciManagement>
+		<system>GitHub Actions</system>
+		<url>https://github.com/Jay2owe/autofix-core/actions</url>
+	</ciManagement>
+
+	<properties>
+		<package-name>sc.fiji.autofix.core</package-name>
+		<license.licenseName>bsd_3</license.licenseName>
+		<license.copyrightOwners>Jamie Malcolm</license.copyrightOwners>
+		<!--
+		  Never published. This module is compiled into its consumers, so a
+		  deploy would put a second copy of these classes on the classpath and
+		  let two plugins disagree about which version loaded.
+		-->
+		<maven.deploy.skip>true</maven.deploy.skip>
+	</properties>
+
+	<repositories>
+		<repository>
+			<id>scijava.public</id>
+			<url>https://maven.scijava.org/content/groups/public</url>
+		</repository>
+	</repositories>
+
+	<dependencies>
+		<!--
+		  The entire dependency list, and it is deliberate. This layer downloads
+		  by java.net.URL with SHA-1 verification and shells out via
+		  ProcessBuilder; it must never acquire net.imagej:updater, Bio-Formats,
+		  TrackMate or anything else a consumer would then have to ship.
+
+		  `provided` because Fiji supplies ij at runtime and it must never be
+		  shaded into a consumer's jar. Note that `provided` is NOT transitive:
+		  every consumer declares ij itself. Both already do.
+		-->
+		<dependency>
+			<groupId>net.imagej</groupId>
+			<artifactId>ij</artifactId>
+			<scope>provided</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+</project>
