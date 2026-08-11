@@ -1,0 +1,11 @@
+# Normalise everything to LF in the repository.
+* text=auto eol=lf
+
+# The restart helpers this module generates are compared byte-for-byte by each
+# consumer's equivalence goldens. Java writes them with \n regardless of
+# platform; git must not rewrite them to \r\n on checkout, or the same code
+# would fail its own gate on Windows and pass on Linux.
+*.ps1 text eol=lf
+*.sh  text eol=lf
+
+*.jar binary
