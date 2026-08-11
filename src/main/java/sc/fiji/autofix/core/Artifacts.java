@@ -68,11 +68,19 @@ public final class Artifacts {
 
     /*
      * The default JarFileOps writes a log and a helper script whose names carry
-     * the product. It is a static singleton (it has no per-call state), so the
-     * product it should use is registered once by the consumer at startup. The
-     * fallback names the module rather than guessing at a plugin, which is
-     * wrong but visibly wrong rather than silently attributed to the wrong
-     * plugin.
+     * the product, and it is a stateless singleton, so the product is
+     * registered once by the consumer at startup.
+     *
+     * A mutable static in shared code would normally be a bug waiting for two
+     * consumers to fight over it. It is safe here precisely because this module
+     * is always shaded with relocation: FLASH gets its own
+     * flash.internal.autofix.Artifacts and PULSE gets pulse.internal.autofix.
+     * Two plugins in one Fiji hold two unrelated classes and two unrelated
+     * statics. If this module were ever shipped as a shared jar — which the
+     * pattern forbids — this field would be the first thing to break.
+     *
+     * The fallback names the module rather than guessing at a plugin: visibly
+     * wrong beats silently attributed to the wrong plugin.
      */
     private static volatile Product deferredDisableProduct = Product.named("autofix");
 
