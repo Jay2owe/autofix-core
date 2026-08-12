@@ -71,6 +71,31 @@ The four FLASH failures are the honest before-state:
 before" when it was not would let this extraction inherit the blame for them, or
 worse, let a fifth failure hide among them.
 
+#### Amendment, 2026-08-12: the baseline is six, not four
+
+Two more went red the next day and had to be attributed before the gate could
+close:
+
+- `CellposeLocalTrainingServiceTest.managedProcessTimeoutTerminatesRootAndPipeInheritingDescendant`
+- `CellposeOneShotIntegrationTest.oneShotManagedTimeoutTerminatesRootAndDescendant`
+
+Both spawn a real JVM using the whole surefire test classpath and give it a **1
+ms** timeout, then assert the spawned process's child announced its PID before
+the tree was torn down. Adding a jar to that classpath — which this extraction
+does — lengthens JVM startup, so there was a plausible causal path from the
+migration to the failure and it could not be waved away as flakiness.
+
+It was settled empirically rather than by argument: a clean `git worktree` at
+`HEAD`, carrying neither the migration nor any uncommitted work, **fails both
+tests with the same two assertion messages**. Not caused here. Their margin was
+already near zero and the machine is slower today than on the 11th.
+
+**The gate therefore requires the same six and no seventh.** These two are
+genuinely flaky and should be given a real timeout rather than left to the
+weather — but that is a separate change against FLASH, not part of this
+extraction, and fixing them here would mean editing an unrelated subsystem inside
+a refactor that claims to change nothing.
+
 Both plugins build with `-Denforcer.skip=true`, which is the documented
 convention in each repo's `AGENTS.md` and not a defect introduced here.
 
@@ -257,15 +282,46 @@ That is strictly stronger than regenerating, and the reason is the line count:
 - reverting a declared change means deleting its rule — the golden is still the
   original, so it simply starts passing again.
 
+### Release-note text, ready to paste
+
+Neither FLASH nor PULSE keeps a `CHANGELOG.md`; FLASH records releases as
+one-line entries under *Current release history* in `VERSIONING.md`, PULSE
+records none. Rather than invent a file in two repositories for a change that has
+not been released, the user-facing wording is parked here and goes into whichever
+release these land in. **Written for a user, not a maintainer** — nobody outside
+these three repositories will ever hear the words "core" or "extraction".
+
+**FLASH** — affected by T3-1, T3-2, T3-3:
+
+> - Dependency checks now also consult ImageJ's own installation directory when
+>   working out where Fiji lives, after `fiji.dir` and `ij.dir`. On an ordinary
+>   install the answer is unchanged; it matters only where several of those point
+>   at different copies of Fiji.
+> - Menu-command detection now ignores capitalisation and surrounding spaces, so
+>   a plugin whose menu label differs from FLASH's list only by a capital or a
+>   space is no longer reported as missing.
+> - Class detection now uses Fiji's own plugin classloader, so ImageJ 1.x plugins
+>   that ship as loose `.class` files rather than jars are found directly instead
+>   of only through their menu entry.
+
+**PULSE** — affected by T3-1, T3-4 (no user-visible change), T3-5:
+
+> - Dependency checks now look for Fiji in a fixed order — `fiji.dir`, `ij.dir`,
+>   ImageJ's own installation directory, then ImageJ's home directory — and a
+>   lookup that fails no longer stops the ones after it.
+> - A dependency whose entry declares no way of detecting it is now reported as a
+>   configuration fault rather than as "not installed". Every dependency PULSE
+>   ships declares one, so no existing message changes.
+
 ### Sign-off
 
 Shipping without a decision on each of these is the failure mode to avoid. All
-five are decided; what remains is the CHANGELOG entry in each affected consumer
-and, for T3-1, one check on a real Fiji install.
+five are decided; what remains is placing the text above into each consumer's
+release notes and, for T3-1, one check on a real Fiji install.
 
 ---
 
-## 5. Two comparison traps
+## 5. Three comparison traps
 
 **Timestamps and pids.** The restart argv contains this JVM's process id; the
 disabled-jar name contains today's date; the write-probe filename contains
@@ -276,6 +332,20 @@ matches everything proves nothing.
 **Absolute paths.** Every fixture path is a temp directory that differs per run.
 Compare paths **relative to the synthetic Fiji.app root**, and assert the root
 itself separately.
+
+**The note describing a normalisation is part of the golden.** Caught on
+2026-08-12, one day after capture, when `disabled-jar-naming.txt` failed with all
+25 behaviour lines identical. The header read:
+
+```
+# NORMALISED: today's date (20260811) is written as <TODAY>
+```
+
+The body was correctly normalised; the sentence *explaining* the normalisation
+had the live date interpolated into it, so the golden matched only on the day it
+was captured. A normalisation note must name the rule and never the value —
+`today's date is written as <TODAY>`. Anything a golden's own preamble
+interpolates has to survive the same scrutiny as the lines beneath it.
 
 ---
 
@@ -344,9 +414,11 @@ All of the following, in writing, before any jar is published:
 - [ ] Both restart scripts byte-identical; argv identical; no `-ExecutionPolicy`
 - [ ] `FLASH-restart-imagej.log` and `PULSE-restart-imagej.log` unchanged
 - [ ] Every product-named file in §3.2 unchanged
-- [ ] T3-1 … T3-5 signed off, with a CHANGELOG line in each affected consumer
+- [ ] T3-1 … T3-5 signed off, with the §4 release-note text placed in each
+      affected consumer's notes
 - [ ] T3-1 verified on a real Fiji install, not only in the harness
-- [ ] FLASH: 4,429 tests, the same 4 pre-existing failures, no fifth
+- [ ] FLASH: 4,429 tests, the same 6 pre-existing failures (§2 amendment), no
+      seventh
 - [ ] PULSE: 967 tests green
 - [ ] `autofix-core`: all tests green, `EmbeddabilityTest` included
 - [ ] Each shaded jar contains its relocated package and **not** `sc/fiji/autofix/core/`
