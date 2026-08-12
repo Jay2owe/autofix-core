@@ -57,7 +57,7 @@ would mean asserting away a real difference.
 | FLASH | 4,429 | 1 failure, 3 errors — **all pre-existing, none in `flash.pipeline.runtime`** |
 | — of which the autofix layer | 66 | green |
 | PULSE | 967 | green, 2 skipped |
-| `autofix-core` | 100 | green |
+| `autofix-core` | 110 | green |
 
 The four FLASH failures are the honest before-state:
 
@@ -214,8 +214,48 @@ that called it — PULSE's form, which FLASH lacked.
 **Who is affected.** On any machine where exactly one source resolves — every
 ordinary Fiji install — the answer is unchanged. It differs only where several
 are set and disagree, i.e. a developer running Fiji from an IDE with a stale
-`ij.dir`. **Risk if wrong:** repairs land in the wrong Fiji installation. This is
-the one to test on a real machine before release, not just in the harness.
+`ij.dir`. **Risk if wrong:** repairs land in the wrong Fiji installation.
+
+#### Tested, 2026-08-12 — `FijiLayoutTest`, 10 cases
+
+`FijiLayout` had no tests at all, which made the highest-risk item in the
+extraction also the least measured. It now has the whole ladder, driven to four
+distinct temporary directories so which rung won is unambiguous. Rungs 3 and 4
+need reflection: they are **not independent**, since `Prefs.getImageJDir()`
+resolves `Menus.ImageJPath` → `Prefs.ImageJDir` → `plugins.dir` → `user.dir`
+while `Prefs.getHomeDir()` returns `ImageJDir` alone, and both backing fields are
+package-private.
+
+Covered: each rung winning in turn; a property naming a deleted directory, a
+file, or an empty string being stepped over rather than taken or thrown on; the
+trailing separator ImageJ appends not surviving into the resolved `File`; and a
+stale `Menus.ImageJPath` not shadowing a good `Prefs.ImageJDir` — the only case
+in which rung 4 is reachable at all.
+
+Two findings came out of writing it:
+
+- **`resolutionSource()` is a second hand-written copy of the same ladder**, and
+  it exists so a user whose repair landed in the wrong installation can be told
+  why. If it drifts it will name a rung that did not run, which is worse than
+  saying nothing. It is now asserted to agree with `resolveFijiDir()` at every
+  rung.
+- **Rung 3's `isDirectory()` check is load-bearing, not defensive tidiness.**
+  With nothing configured, ImageJ 1.53f's `Prefs.getImageJDir()` does not give
+  up — it returns `ijPath + File.separator` with `ijPath` still null, i.e. the
+  literal string `"null\"`. Measured in this JVM, not assumed. Trusting rung 3
+  the way a system property is trusted would have made `resolveFijiDir()` return
+  the relative path `null`, and the autofix layer would have created a directory
+  called `null` beside wherever Fiji was launched from and downloaded jars into
+  it. The assertion is written to hold on any `ij` version, because Fiji ships a
+  newer one than the 1.53f all three modules compile against: whatever
+  `IJ.getDirectory` answers, the ladder either uses a directory that exists or
+  reports `"none"`.
+
+**What the harness still cannot tell you.** Only whether *your* machine has a
+disagreement to begin with, and what its real `IJ.getDirectory("imagej")`
+returns. Every fixture here is a synthetic directory built for the test, so by
+construction it cannot observe the live install. One run of a dependency check on
+a real Fiji closes that, and if a second Fiji exists anywhere, one run in each.
 
 ### T3-2 · `commandProbe` matching
 
@@ -330,8 +370,10 @@ these three repositories will ever hear the words "core" or "extraction".
 ### Sign-off
 
 Shipping without a decision on each of these is the failure mode to avoid. All
-five are decided; what remains is placing the text above into each consumer's
-release notes and, for T3-1, one check on a real Fiji install.
+five are decided, and T3-1's ladder — the riskiest of them — is now proven rung
+by rung in `FijiLayoutTest`. What remains is placing the text above into each
+consumer's release notes, and one dependency check run on a real Fiji, which is
+the only part of T3-1 a synthetic fixture cannot reach.
 
 ---
 
@@ -430,7 +472,10 @@ All of the following, in writing, before any jar is published:
 - [ ] Every product-named file in §3.2 unchanged
 - [ ] T3-1 … T3-5 signed off, with the §4 release-note text placed in each
       affected consumer's notes
-- [ ] T3-1 verified on a real Fiji install, not only in the harness
+- [x] T3-1 ladder proven by `FijiLayoutTest` — every rung, and the guard that
+      stops a non-existent path being handed back
+- [ ] T3-1 checked once on a real Fiji install — the only part a synthetic
+      fixture cannot reach is whether your machine has a disagreement at all
 - [ ] FLASH: 4,469 tests, the same 7 pre-existing failures (§2 amendment), no
       eighth, and none in `flash.pipeline.runtime`
 - [ ] PULSE: 967 tests green

@@ -2,8 +2,8 @@
 
 The dependency-autofix chassis, as an embeddable module.
 
-**Status:** built. 100 tests green. Extraction from FLASH and PULSE in progress —
-see `EQUIVALENCE_HARNESS.md` for the gate.
+**Status:** built. 110 tests green. Both consumers migrated and passing; see
+`EQUIVALENCE_HARNESS.md` for the gate and the five declared changes.
 **Pattern:** `../PLUGIN_CORE_PATTERN.md`
 **Depends on:** `net.imagej:ij`. Nothing else. Not even another core.
 **Never shipped as a jar.**
