@@ -71,10 +71,10 @@ The four FLASH failures are the honest before-state:
 before" when it was not would let this extraction inherit the blame for them, or
 worse, let a fifth failure hide among them.
 
-#### Amendment, 2026-08-12: the baseline is six, not four
+#### Amendment, 2026-08-12: the baseline is seven, not four
 
-Two more went red the next day and had to be attributed before the gate could
-close:
+Three more went red the next day and had to be attributed before the gate could
+close. The first two:
 
 - `CellposeLocalTrainingServiceTest.managedProcessTimeoutTerminatesRootAndPipeInheritingDescendant`
 - `CellposeOneShotIntegrationTest.oneShotManagedTimeoutTerminatesRootAndDescendant`
@@ -90,11 +90,25 @@ It was settled empirically rather than by argument: a clean `git worktree` at
 tests with the same two assertion messages**. Not caused here. Their margin was
 already near zero and the machine is slower today than on the 11th.
 
-**The gate therefore requires the same six and no seventh.** These two are
-genuinely flaky and should be given a real timeout rather than left to the
-weather — but that is a separate change against FLASH, not part of this
-extraction, and fixing them here would mean editing an unrelated subsystem inside
-a refactor that claims to change nothing.
+And the third:
+
+- `CellposePersistentWorkerTest.helperRunsThreeRequestsWhenCellposeRuntimeIsConfigured`
+  — `IllegalStateException: Cellpose helper did not become ready within 30
+  seconds`. This one drives the **real** Python Cellpose install under
+  `~/.ihf-pipeline/cellpose/` and runs actual inference.
+
+Attributed by its own timings rather than by a worktree, because it had already
+exonerated itself: **the same migrated tree passed it earlier the same day** at
+79.8 s, against 94.3 s in the pre-extraction baseline and 107.5 s when it failed.
+A 30-second readiness deadline on a machine that has just run 4,400 tests.
+
+**The gate therefore requires the same seven and no eighth.** All three belong to
+one family — a real subprocess racing a wall-clock deadline with almost no
+margin — and all three deserve real timeouts rather than being left to the
+weather. That is a separate change against FLASH. Making it here would mean
+editing an unrelated subsystem inside a refactor whose entire claim is that it
+changes nothing, and the next person could no longer tell which edits were the
+extraction.
 
 Both plugins build with `-Denforcer.skip=true`, which is the documented
 convention in each repo's `AGENTS.md` and not a defect introduced here.
@@ -417,8 +431,8 @@ All of the following, in writing, before any jar is published:
 - [ ] T3-1 … T3-5 signed off, with the §4 release-note text placed in each
       affected consumer's notes
 - [ ] T3-1 verified on a real Fiji install, not only in the harness
-- [ ] FLASH: 4,429 tests, the same 6 pre-existing failures (§2 amendment), no
-      seventh
+- [ ] FLASH: 4,469 tests, the same 7 pre-existing failures (§2 amendment), no
+      eighth, and none in `flash.pipeline.runtime`
 - [ ] PULSE: 967 tests green
 - [ ] `autofix-core`: all tests green, `EmbeddabilityTest` included
 - [ ] Each shaded jar contains its relocated package and **not** `sc/fiji/autofix/core/`
