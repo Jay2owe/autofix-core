@@ -216,6 +216,37 @@ ordinary Fiji install — the answer is unchanged. It differs only where several
 are set and disagree, i.e. a developer running Fiji from an IDE with a stale
 `ij.dir`. **Risk if wrong:** repairs land in the wrong Fiji installation.
 
+#### Settled on a real Fiji, 2026-08-12 — `run_9a24a3a10735`
+
+```
+T31=fiji.dir|SAME_AS_RUNNING_INSTALL
+T31RESOLVED=<sandbox>
+T31IJDIR=<sandbox>
+```
+
+The machine used carries **two complete Fiji installations** — the harness
+sandbox and the Dropbox install it was copied from — so a lookup that guessed
+wrong had somewhere real and populated to land. Rung 1 answered (`fiji.dir`, set
+by the Fiji launcher) and what it returned is, after normalising separators and
+the trailing one, the same directory ImageJ itself reports running from.
+`<sandbox>` is the harness scrubbing the real path out of its corpus; both values
+scrub to it, which is the point.
+
+The comparison is computed inside the JVM rather than by the harness, precisely
+*because* of that scrubbing: a report that hides real paths is right for a report
+and useless for an equality test.
+
+**What it took to ask.** Four routes failed before one worked, and the reasons
+are worth keeping — `eval("script", …)` resolves `Packages.` against a
+classloader that cannot see a plugin's shaded classes; `getInfo(key)` aborts a
+macro when the named property is unset; `getDirectory("imagej")` puts up a
+directory *chooser* when ImageJ cannot answer, which blocks forever; and
+`call()` — the one construct with none of those problems — is refused by the
+harness's governed `execute_macro`, correctly, since it invokes arbitrary static
+Java. What worked was installing the probe as a `.ijm` in the sandbox's
+`plugins/` folder and launching it from Fiji's search bar, the same physical
+route `flash-dependencies` had already proven.
+
 #### Tested, 2026-08-12 — `FijiLayoutTest`, 10 cases
 
 `FijiLayout` had no tests at all, which made the highest-risk item in the
@@ -513,10 +544,9 @@ All of the following, in writing, before any jar is published:
 - [x] T3-1 ladder proven by `FijiLayoutTest` — every rung, and the guard that
       stops a non-existent path being handed back
 - [x] T3-3 fallback proven on a real Fiji — `run_6e66a82ab26a`, §4
-- [ ] T3-1 checked once on a real Fiji install. **Still open**, and the physical
-      run did not close it: nothing in that corpus records *which* directory was
-      resolved, so it says the probes are right and not that they looked in the
-      right installation
+- [x] T3-1 checked on a real Fiji install — `run_9a24a3a10735`, on a machine
+      carrying two installations, so the wrong answer was available and was not
+      given
 - [ ] FLASH: 4,469 tests, the same 7 pre-existing failures (§2 amendment), no
       eighth, and none in `flash.pipeline.runtime`
 - [ ] PULSE: 967 tests green
