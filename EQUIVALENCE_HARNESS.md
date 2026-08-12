@@ -285,6 +285,44 @@ now succeed on the class route too.
 `ProbeContext` when one is supplied, falling back to Fiji's. FLASH's existing
 tests that probe against a synthetic `URLClassLoader` keep working unchanged.
 
+#### Proven on a real Fiji, 2026-08-12 — `run_6e66a82ab26a`
+
+The gap this closes: every other test of this change supplies its own
+`URLClassLoader`, which exercises the seam and **not** the fallback. T3-3 is
+about the fallback — what happens when nobody supplies a loader and the probe
+asks Fiji.
+
+Driven physically through the ImageJ Plugin Test Harness
+(`scenarios/flash-dependencies`), against the migrated FLASH jar in a sandbox
+Fiji with 672 jars:
+
+1. One jar was hidden — `jars/poi-3.17.jar` — leaving `poi-ooxml` and
+   `poi-ooxml-schemas` in place, so a probe that counted files would still have
+   been satisfied.
+2. Independently confirmed, in a plain JVM over the same 672 jars, that
+   `org.apache.poi.ss.usermodel.Workbook` no longer resolves at all and
+   `XSSFWorkbook` fails on `NoClassDefFoundError` behind it.
+3. FLASH was launched from Fiji's search bar by real keystrokes. Before asking
+   for anything else it raised **`FLASH Dependencies Need Attention`**, whose
+   row read, physically off the screen:
+
+   ```
+   Apache POI runtime - Missing
+   ```
+
+4. The full `Pipeline Dependencies` window was opened and **only that
+   dependency** was reported broken.
+
+Step 4 is the assertion that carries the weight. "POI is reported missing" would
+also pass under a classloader that could see nothing at all — every class-probed
+dependency would read missing, including the one that genuinely is. "POI is
+missing **and** the other nineteen are not" cannot pass that way. It is the
+evidence this change never had, and it is now on the record.
+
+**One route is proven, not the whole class.** Nothing here exercised the ImageJ
+1.x loose-`.class` case named above, which is the reason the change was made.
+That still rests on reading.
+
 ### T3-4 · Probe contract
 
 FLASH's probes returned a `DependencyStatus` carrying their own detail line.
@@ -474,8 +512,11 @@ All of the following, in writing, before any jar is published:
       affected consumer's notes
 - [x] T3-1 ladder proven by `FijiLayoutTest` — every rung, and the guard that
       stops a non-existent path being handed back
-- [ ] T3-1 checked once on a real Fiji install — the only part a synthetic
-      fixture cannot reach is whether your machine has a disagreement at all
+- [x] T3-3 fallback proven on a real Fiji — `run_6e66a82ab26a`, §4
+- [ ] T3-1 checked once on a real Fiji install. **Still open**, and the physical
+      run did not close it: nothing in that corpus records *which* directory was
+      resolved, so it says the probes are right and not that they looked in the
+      right installation
 - [ ] FLASH: 4,469 tests, the same 7 pre-existing failures (§2 amendment), no
       eighth, and none in `flash.pipeline.runtime`
 - [ ] PULSE: 967 tests green
