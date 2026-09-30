@@ -4,7 +4,8 @@ The dependency-autofix chassis, as an embeddable module.
 
 **Status:** built. 110 tests green. Both consumers migrated and passing; see
 `EQUIVALENCE_HARNESS.md` for the gate and the five declared changes.
-**Pattern:** `../PLUGIN_CORE_PATTERN.md`
+**Pattern:** a plugin core: compiled into each consumer's jar and relocated
+under the consumer's own package, never installed into Fiji on its own.
 **Depends on:** `net.imagej:ij`. Nothing else. Not even another core.
 **Never shipped as a jar.**
 

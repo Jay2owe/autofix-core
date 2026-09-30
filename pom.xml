@@ -34,7 +34,7 @@
 	<!--
 	  BSD-3-Clause with no asterisk. This module links net.imagej:ij (ImageJ 1.x,
 	  public domain) and nothing else, so a consumer that shades it in inherits
-	  no obligation from it. See ../PLUGIN_CORE_PATTERN.md.
+	  no obligation from it.
 	-->
 	<licenses>
 		<license>
