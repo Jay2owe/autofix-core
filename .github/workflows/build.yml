@@ -51,9 +51,12 @@ jobs:
       # nothing. Anything beyond ij is a second install for every consumer.
       - name: Check the dependency list is still ij only
         run: |
+          # includeScope=runtime alone: combining it with excludeScope=test is
+          # rejected by maven-dependency-plugin 3.x. ij is `provided`, so the
+          # expected list is empty; any compile or runtime dependency fails.
           mvn --batch-mode --no-transfer-progress dependency:list \
-              -DexcludeScope=test -DoutputFile=deps.txt -DincludeScope=runtime
-          if grep -vE '^(\s*$|The following|net\.imagej:ij)' deps.txt | grep -q ':'; then
+              -DoutputFile=deps.txt -DincludeScope=runtime
+          if grep -vE '^\s*($|The following|none$|net\.imagej:ij)' deps.txt | grep -q ':'; then
             echo "FAIL: this module acquired a dependency beyond net.imagej:ij."
             cat deps.txt
             exit 1
